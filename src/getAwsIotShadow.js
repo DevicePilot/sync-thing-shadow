@@ -2,8 +2,6 @@ const AWS = require('aws-sdk');
 const flat = require('flat');
 const { accessKeyId, secretAccessKey, region, endpoint } = require('../config.js');
 
-console.log(`using ${accessKeyId}, ${secretAccessKey}, ${region} :: ${endpoint}`);
-
 AWS.config.update({
   region,
   credentials: new AWS.Credentials(accessKeyId, secretAccessKey),
