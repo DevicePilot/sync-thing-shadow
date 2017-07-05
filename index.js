@@ -1,49 +1,50 @@
-var AWS = require('aws-sdk');
-var iot = new AWS.Iot();
-var iotdata = new AWS.IotData({ endpoint: AWS_ENDPOINT });
+const AWS = require('aws-sdk');
+
+const iot = new AWS.Iot();
+const iotdata = new AWS.IotData({ endpoint: process.env.AWS_ENDPOINT });
 
 const getThingNames = (thingNames = [], lastNextToken = null) =>
   iot
     .listThings({ nextToken: lastNextToken })
     .promise()
     .then(({ things, nextToken }) => {
-      names = things.map(t => t.thingName);
-      thingNames.push[...names];
-      return nextToken ? listThings(thingNames, nextToken) : Promise.resolve(thingNames);
+      const names = things.map(t => t.thingName);
+      thingNames.push([...names]);
+      return nextToken ? getThingNames(thingNames, nextToken) : Promise.resolve(thingNames);
     });
 
-const getThingShadowRecords(thingName) =>
+const getThingShadowRecords = thingName =>
   iotdata
     .getThingShadow({ thingName })
     .promise()
     .then(({ state, metadata, timestamp }) => {
       const $id = thingName;
       // todo: flatten state
-      const fields = Object.keys(state);
-      const records fields.map(f => ({
+      const fields = Object.keys(state.reported);
+      const records = fields.map(f => ({
         $id,
-        $ts: reported[f].timestamp || timestamp, // todo: convert to expected
-        [f]: state[f],
+        $ts: metadata.reported[f].timestamp || timestamp, // todo: convert to expected
+        [f]: state.reported[f],
       }));
       return Promise.resolve(records);
     });
 
-const getThingShadowAsRecords() =>
+const getThingShadowAsRecords = () =>
   getThingNames()
     .then(thingNames =>
       Promise.all(
         thingNames.map(n => getThingShadowRecords(n)),
       ),
     )
-    .then((recordSets)s => {
-      records = [].concat(recordSets);
+    .then((recordSets) => {
+      const records = [].concat(recordSets);
       records.sort((a, b) => a.$ts - b.$ts);
       return Promise.resolve(records);
     });
 
 const DP_BATCH_SIZE = 200;
 
-const postToDevicePilot() =>
+const postToDevicePilot = () =>
   getThingShadowAsRecords()
     .then((records) => {
       while (records) {
