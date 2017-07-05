@@ -10,5 +10,12 @@
     "aws-sdk": "^2.80.0",
     "request": "^2.81.0",
     "request-promise-native": "^1.0.4"
+  },
+  "devDependencies": {
+    "eslint": "^3.19.0",
+    "eslint-config-airbnb": "^15.0.2",
+    "eslint-plugin-import": "^2.6.1",
+    "eslint-plugin-jsx-a11y": "^5.1.1",
+    "eslint-plugin-react": "^7.1.0"
   }
 }
