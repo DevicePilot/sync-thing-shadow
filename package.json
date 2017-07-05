@@ -8,6 +8,7 @@
   "license": "MIT",
   "dependencies": {
     "aws-sdk": "^2.80.0",
+    "flat": "^2.0.1",
     "request": "^2.81.0",
     "request-promise-native": "^1.0.4"
   },

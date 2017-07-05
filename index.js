@@ -1,4 +1,5 @@
 const AWS = require('aws-sdk');
+const flat = require('flat');
 
 const region = process.env.AWS_REGION;
 const endpoint = process.env.AWS_ENDPOINT;
@@ -16,30 +17,48 @@ const getThingNames = (thingNames = [], lastNextToken = null) =>
       return nextToken ? getThingNames(thingNames, nextToken) : Promise.resolve(thingNames);
     });
 
+const extractShadow = (payload) => {
+  const shadow = JSON.parse(payload);
+  const { state, metadata, timestamp } = shadow;
+
+  const reportedState = (state.reported || {});
+  const flatState = flat(reportedState);
+
+  const reportedMetadata = (metadata.reported || {});
+  const flatMetadata = flat(reportedMetadata);
+  const tsOnlyMetadata =
+    Object.keys(flatMetadata)
+      .filter(k => k.endsWith('.timestamp'))
+      .reduce((o, k) => Object.assign({}, o, {
+        [k.replace('.timestamp', '')]: flatMetadata[k],
+      }), {});
+
+  return {
+    state: flatState,
+    metadata: tsOnlyMetadata,
+    timestamp,
+  };
+};
+
 const getThingShadowRecords = thingName =>
   iotdata
     .getThingShadow({ thingName })
     .promise()
     .then(({ payload }) => {
-      const shadow = JSON.parse(payload);
-      const { state, metadata, timestamp } = shadow;
+      const { state, metadata, timestamp } = extractShadow(payload);
       const $id = thingName;
-      const $ts = (state.reported || {}).$ts;
-      // todo: flatten state
-      const fields = Object.keys(state.reported || {});
+      const $ts = state.$ts;
+
+      const fields = Object.keys(state);
       const records = fields
-        .filter(f =>
-          f !== '$id' &&
-          f !== '$ts' &&
-          state.reported[f] !== undefined,
-        )
+        .filter(f => f !== '$id' && f !== '$ts')
         .map(f => ({
           $id,
           $ts: // respect $ts in data, then reported time, then finally shadow update time.
             $ts ||
-            (metadata.reported || {})[f].timestamp * 1000 ||
+            metadata[f].timestamp * 1000 ||
             timestamp * 1000,
-          [f]: state.reported[f],
+          [f]: state[f],
         }));
       return Promise.resolve(records);
     });
@@ -57,7 +76,7 @@ const getThingShadowAsRecords = () =>
       return Promise.resolve(records);
     });
 
-const DP_BATCH_SIZE = 10;
+const DP_BATCH_SIZE = 100;
 
 const postToDevicePilot = () =>
   getThingShadowAsRecords()
