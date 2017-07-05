@@ -1,93 +1,54 @@
 var AWS = require('aws-sdk');
 var iot = new AWS.Iot();
-var iotdata = new AWS.IotData({endpoint: 'my.host.tld'});
+var iotdata = new AWS.IotData({ endpoint: AWS_ENDPOINT });
 
-// list-things
-var params = {
-  // attributeName: 'STRING_VALUE',
-  // attributeValue: 'STRING_VALUE',
-  // maxResults: 0,
-  nextToken: 'STRING_VALUE', .. || null.
-  // thingTypeName: 'STRING_VALUE'
-};
-iot.listThings(params, function(err, data) {
-  if (err) console.log(err, err.stack); // an error occurred
-  else     console.log(data);           // successful response
-});
-// data (Object) — the de-serialized data returned from the request. Set to null if a request error occurs. The data object has the following properties:
-// things — (Array<map>)
-// The things.
+const getThingNames = (thingNames = [], lastNextToken = null) =>
+  iot
+    .listThings({ nextToken: lastNextToken })
+    .promise()
+    .then(({ things, nextToken }) => {
+      names = things.map(t => t.thingName);
+      thingNames.push[...names];
+      return nextToken ? listThings(thingNames, nextToken) : Promise.resolve(thingNames);
+    });
 
-// thingName — (String)
-// The name of the thing.
+const getThingShadowRecords(thingName) =>
+  iotdata
+    .getThingShadow({ thingName })
+    .promise()
+    .then(({ state, metadata, timestamp }) => {
+      const $id = thingName;
+      // todo: flatten state
+      const fields = Object.keys(state);
+      const records fields.map(f => ({
+        $id,
+        $ts: reported[f].timestamp || timestamp, // todo: convert to expected
+        [f]: state[f],
+      }));
+      return Promise.resolve(records);
+    });
 
-// thingTypeName — (String)
-// The name of the thing type, if the thing has been associated with a type.
+const getThingShadowAsRecords() =>
+  getThingNames()
+    .then(thingNames =>
+      Promise.all(
+        thingNames.map(n => getThingShadowRecords(n)),
+      ),
+    )
+    .then((recordSets)s => {
+      records = [].concat(recordSets);
+      records.sort((a, b) => a.$ts - b.$ts);
+      return Promise.resolve(records);
+    });
 
-// attributes — (map<String>)
-// A list of thing attributes which are name-value pairs.
+const DP_BATCH_SIZE = 200;
 
-// version — (Integer)
-// The version of the thing record in the registry.
+const postToDevicePilot() =>
+  getThingShadowAsRecords()
+    .then((records) => {
+      while (records) {
+        const batch = records.splice(0, DP_BATCH_SIZE);
+        console.log(`Posting ${JSON.stringify(batch)}`);
+      }
+    });
 
-// nextToken — (String)
-// The token for the next set of results, or null if there are no additional results.
-
-
-// get-thing-shadow
-var params = {
-  thingName: 'STRING_VALUE' /* required */
-};
-iotdata.getThingShadow(params, function(err, data) {
-  if (err) console.log(err, err.stack); // an error occurred
-  else     console.log(data);           // successful response
-});
-// {
-//     "state": {
-//         "desired": {
-//             "attribute1": integer2,
-//             "attribute2": "string2",
-//             ...
-//             "attributeN": boolean2
-//         },
-//         "reported": {
-//             "attribute1": integer1,
-//             "attribute2": "string1",
-//             ...
-//             "attributeN": boolean1
-//         },
-//         "delta": {
-//             "attribute3": integerX,
-//             "attribute5": "stringY"
-//         }
-//     },
-//     "metadata": {
-//         "desired": {
-//             "attribute1": {
-//                 "timestamp": timestamp
-//             },
-//             "attribute2": {
-//                 "timestamp": timestamp
-//             },
-//             ...
-//             "attributeN": {
-//                 "timestamp": timestamp
-//             }
-//         },
-//         "reported": {
-//             "attribute1": {
-//                 "timestamp": timestamp
-//             },
-//             "attribute2": {
-//                 "timestamp": timestamp
-//             },
-//             ...
-//             "attributeN": {
-//                 "timestamp": timestamp
-//             }
-//         }
-//     },
-//     "timestamp": timestamp,
-//     "clientToken": "token",
-//     "version": version
-// }
