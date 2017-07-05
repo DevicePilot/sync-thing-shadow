@@ -1,0 +1,14 @@
+{
+  "name": "sync-thing-shadow",
+  "version": "1.0.0",
+  "description": "Example function to synchronise AWS IoT Device Shadow with DevicePilot",
+  "main": "index.js",
+  "repository": "https://github.com/DevicePilot/sync-thing-shadow.git",
+  "author": "tom.wallace@devicepilot.com",
+  "license": "MIT",
+  "dependencies": {
+    "aws-sdk": "^2.80.0",
+    "request": "^2.81.0",
+    "request-promise-native": "^1.0.4"
+  }
+}
