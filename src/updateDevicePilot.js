@@ -1,7 +1,7 @@
 const rp = require('request-promise-native');
 const { dpApiKey, dpBatchSize, dpApiUrl } = require('../config.js');
 
-const uri = `${dpApiUrl}/ingest`;
+const uri = `${dpApiUrl}/devices`;
 const headers = { Authorization: `TOKEN ${dpApiKey}` };
 const json = true;
 
