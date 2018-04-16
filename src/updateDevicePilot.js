@@ -13,9 +13,10 @@ const postToDevicePilot = records => (
           uri,
           headers,
           json,
-          body: records.splice(0, dpBatchSize),
+          body: records.splice(0, dpBatchSize), // always prefer to batch together records.
         })
         .then(() => postToDevicePilot(records))
+        // .catch(() => back-off and retry logic to be added.
 );
 
 module.exports = postToDevicePilot;
