@@ -8,5 +8,7 @@ module.exports = {
   // devicepilot configuration
   dpApiKey: process.env.DP_API_KEY,
   dpApiUrl: process.env.DP_API_URL || 'https://api.devicepilot.com',
-  dpBatchSize: 100,
+  // shadow sync configuration
+  dpBatchSize: 250,
+  dpBatchDelay: 5000,
 };
