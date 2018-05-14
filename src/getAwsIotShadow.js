@@ -7,7 +7,7 @@ AWS.config.update({
   credentials: new AWS.Credentials(accessKeyId, secretAccessKey),
 });
 const iot = new AWS.Iot();
-const iotdata = new AWS.IotData({ endpoint });
+const iotData = new AWS.IotData({ endpoint });
 
 const getThingNames = (thingNames = [], lastNextToken = null) =>
   iot
@@ -43,7 +43,7 @@ const extractShadow = (payload) => {
 };
 
 const getThingShadowRecords = thingName =>
-  iotdata
+  iotData
     .getThingShadow({ thingName })
     .promise()
     .then(({ payload }) => {
