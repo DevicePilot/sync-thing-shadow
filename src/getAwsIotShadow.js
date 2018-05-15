@@ -1,6 +1,6 @@
 const AWS = require('aws-sdk');
 const flat = require('flat');
-const { accessKeyId, secretAccessKey, region, endpoint } = require('../config.js');
+const { accessKeyId, secretAccessKey, region, endpoint, includeRecord } = require('../config.js');
 
 AWS.config.update({
   region,
@@ -37,7 +37,7 @@ const extractShadow = (payload) => {
 
   return {
     state: flatState,
-    metadata: tsOnlyMetadata,
+    timestamps: tsOnlyMetadata,
     timestamp,
   };
 };
@@ -47,35 +47,51 @@ const getThingShadowRecords = thingName =>
     .getThingShadow({ thingName })
     .promise()
     .then(({ payload }) => {
-      const { state, metadata, timestamp } = extractShadow(payload);
+      const { state, timestamps, timestamp } = extractShadow(payload);
       const $id = thingName;
-      const $ts = state.$ts;
 
       const fields = Object.keys(state);
       const records = fields
         .filter(f => f !== '$id' && f !== '$ts')
         .map(f => ({
           $id,
-          $ts: // respect $ts in data, then reported time, then finally shadow update time.
-            $ts ||
-            metadata[f].timestamp * 1000 ||
+          $ts: // prefer reported time, to complete shadow update time.
+            timestamps[f] * 1000 ||
             timestamp * 1000,
           [f]: state[f],
         }));
       return Promise.resolve(records);
     });
 
+const groupRecordsByTime = (recordSets) => {
+  // records in DevicePilot can be grouped by common $id and $ts.
+  const records = [].concat(...(recordSets || []).map((set) => {
+    set.sort((a, b) => a.$ts - b.$ts);
+    const chunks = [];
+    let chunk = {};
+    set.forEach((r) => {
+      if (r.$ts === chunk.$ts) {
+        Object.assign(chunk, r);
+      } else {
+        if (chunk.$ts) { chunks.push(chunk); }
+        chunk = r;
+      }
+    });
+    if (chunk.$ts) { chunks.push(chunk); }
+    return chunks;
+  }));
+  return records;
+};
+
 const getThingShadowAsRecords = () =>
   getThingNames()
-    .then(thingNames =>
-      Promise.all(
-        thingNames.map(n => getThingShadowRecords(n)),
-      ),
-    )
+    .then(thingNames => Promise.all(thingNames.map(n => getThingShadowRecords(n))))
     .then((recordSets) => {
-      const records = [].concat(...recordSets);
+      const records = groupRecordsByTime(recordSets);
+      // records should be sorted going forward in time.
       records.sort((a, b) => a.$ts - b.$ts);
-      return Promise.resolve(records);
+      const inRange = records.filter(includeRecord);
+      return Promise.resolve(inRange);
     });
 
 module.exports = getThingShadowAsRecords;
