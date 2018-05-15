@@ -24,7 +24,7 @@ const postToDevicePilot = records => (
           body: records.splice(0, dpBatchSize), // always prefer to batch together records.
         }))
       .then(() => postToDevicePilot(records))
-      // .catch(() => back-off and retry logic to be added.
+      // .catch(() => TODO: back-off and retry logic.
 );
 
 module.exports = postToDevicePilot;

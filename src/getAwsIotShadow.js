@@ -51,14 +51,17 @@ const getThingShadowRecords = thingName =>
       const $id = thingName;
 
       const fields = Object.keys(state);
+      // build a single device update record for each property in the shadow.
       const records = fields
+        // $id and $ts are reserved fields.
         .filter(f => f !== '$id' && f !== '$ts')
         .map(f => ({
-          $id,
-          $ts: // prefer reported time, to complete shadow update time.
+          $id, // devices are identified by $id in DevicePilot
+          $ts: // time in ms unix epoch
+            // prefer property last reported time, latest shadow document time.
             timestamps[f] * 1000 ||
             timestamp * 1000,
-          [f]: state[f],
+          [f]: state[f], // typed updated property.
         }));
       return Promise.resolve(records);
     });
